@@ -1,27 +1,32 @@
 use nom::{
     bytes::complete::{take_until, take_while1},
     character::complete::char,
+    combinator::opt,
     sequence::delimited,
     IResult, Parser,
 };
 
 // TODO: evaluate internal string value in an stricter way
 pub fn parse_string(input: &str) -> IResult<&str, &str> {
-    delimited(char('"'), take_until("\""), char('"'))(input)
+    delimited(char('"'), take_until("\""), char('"')).parse(input)
 }
 
-// TODO: evaluate internal number value in an stricter way. Currently is just taking positive integers
-pub fn parse_number(input: &str) -> IResult<&str, i32> {
-    take_while1(|c: char| c.is_numeric())
-        .map(|n: &str| n.parse::<i32>().unwrap())
-        .parse(input)
+pub fn parse_integer(input: &str) -> IResult<&str, i32> {
+    opt(char('-')).parse(input).and_then(|(next, sign)| {
+        take_while1(|c: char| c.is_numeric())
+            .parse(next)
+            .map(|(next, n)| match sign {
+                Some(_) => (next, n.parse::<i32>().unwrap() * (-1)),
+                None => (next, n.parse::<i32>().unwrap()),
+            })
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use nom::error;
 
-    use super::{parse_number, parse_string};
+    use super::{parse_integer, parse_string};
 
     #[test]
     fn test_parse_string() {
@@ -44,19 +49,24 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_number() {
-        assert_eq!(parse_number("2001"), Ok(("", 2001)));
-        assert_eq!(parse_number("2001 ...continue"), Ok((" ...continue", 2001)));
+    fn test_parse_integer() {
+        assert_eq!(parse_integer("2001"), Ok(("", 2001)));
+        assert_eq!(
+            parse_integer("2001 ...continue"),
+            Ok((" ...continue", 2001))
+        );
+
+        assert_eq!(parse_integer("-9999 uwu"), Ok((" uwu", -9999)));
 
         assert_eq!(
-            parse_number(""),
+            parse_integer(""),
             Err(nom::Err::Error(nom::error::Error::new(
                 "",
                 error::ErrorKind::TakeWhile1
             )))
         );
         assert_eq!(
-            parse_number("not a number"),
+            parse_integer("not a number"),
             Err(nom::Err::Error(nom::error::Error::new(
                 "not a number",
                 error::ErrorKind::TakeWhile1
