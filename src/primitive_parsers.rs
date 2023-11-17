@@ -2,7 +2,7 @@ use nom::{
     bytes::complete::{take_until, take_while1},
     character::complete::char,
     combinator::opt,
-    sequence::delimited,
+    sequence::{delimited, preceded},
     IResult, Parser,
 };
 
@@ -22,11 +22,32 @@ pub fn parse_integer(input: &str) -> IResult<&str, i32> {
     })
 }
 
+pub fn parse_float(input: &str) -> IResult<&str, f64> {
+    opt(char('-')).parse(input).and_then(|(next, sign)| {
+        take_while1(|c: char| c.is_numeric())
+            .parse(next)
+            .and_then(|(float, integer)| {
+                preceded(char('.'), take_while1(|c: char| c.is_numeric()))
+                    .parse(float)
+                    .map(|(next, f)| match sign {
+                        Some(_) => {
+                            let value = format!("{}.{}", integer, f);
+                            (next, value.parse::<f64>().unwrap() * (-1.0))
+                        }
+                        None => {
+                            let value = format!("{}.{}", integer, f);
+                            (next, value.parse::<f64>().unwrap())
+                        }
+                    })
+            })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use nom::error;
 
-    use super::{parse_integer, parse_string};
+    use super::{parse_float, parse_integer, parse_string};
 
     #[test]
     fn test_parse_string() {
@@ -67,6 +88,32 @@ mod tests {
         );
         assert_eq!(
             parse_integer("not a number"),
+            Err(nom::Err::Error(nom::error::Error::new(
+                "not a number",
+                error::ErrorKind::TakeWhile1
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_float() {
+        assert_eq!(parse_float("10.25"), Ok(("", 10.25)));
+        assert_eq!(parse_float("-10.25"), Ok(("", -10.25)));
+        assert_eq!(
+            parse_float("-10.25 other text i dont use 123"),
+            Ok((" other text i dont use 123", -10.25))
+        );
+
+        assert_eq!(
+            parse_float(""),
+            Err(nom::Err::Error(nom::error::Error::new(
+                "",
+                error::ErrorKind::TakeWhile1
+            )))
+        );
+
+        assert_eq!(
+            parse_float("not a number"),
             Err(nom::Err::Error(nom::error::Error::new(
                 "not a number",
                 error::ErrorKind::TakeWhile1
