@@ -1,5 +1,6 @@
 use nom::{
-    bytes::complete::take_until,
+    branch::alt,
+    bytes::complete::{tag, take_until},
     character::complete::{char, digit1},
     combinator::opt,
     sequence::delimited,
@@ -24,11 +25,31 @@ pub fn parse_integer(input: &str) -> IResult<&str, i32> {
     })
 }
 
+pub fn parse_bool(input: &str) -> IResult<&str, bool> {
+    alt((tag("true"), tag("false")))
+        .parse(input)
+        .map(|(next_input, str_bool)| match str_bool {
+            "true" => (next_input, true),
+            "false" => (next_input, false),
+
+            // Another option is unreachable because parse functions have already validated given input so they only can be `true` or `false`
+            // Finally, with those two options, we can match the `str_bool` to boolean values without risk
+            _ => unreachable!(),
+        })
+}
+
+pub fn parse_null<T>(input: &str) -> IResult<&str, Option<T>> {
+    tag("null")
+        .parse(input)
+        .map(|(next_input, _)| (next_input, None))
+}
+
 #[cfg(test)]
 mod tests {
+
     use nom::error;
 
-    use super::{parse_integer, parse_string};
+    use super::{parse_bool, parse_integer, parse_null, parse_string};
 
     #[test]
     fn test_parse_string() {
@@ -72,6 +93,42 @@ mod tests {
             Err(nom::Err::Error(nom::error::Error::new(
                 "not a number",
                 error::ErrorKind::Digit
+            )))
+        )
+    }
+
+    #[test]
+    fn test_parse_bool() {
+        assert_eq!(parse_bool("true"), Ok(("", true)));
+        assert_eq!(parse_bool("false"), Ok(("", false)));
+
+        assert_eq!(
+            parse_bool("true ...and other content"),
+            Ok((" ...and other content", true))
+        );
+
+        assert_eq!(
+            parse_bool("not a bool"),
+            Err(nom::Err::Error(nom::error::Error::new(
+                "not a bool",
+                error::ErrorKind::Tag
+            )))
+        );
+    }
+
+    #[test]
+    fn test_parse_null() {
+        assert_eq!(parse_null::<String>("null"), Ok(("", None)));
+        assert_eq!(
+            parse_null::<String>("null ...another text"),
+            Ok((" ...another text", None))
+        );
+
+        assert_eq!(
+            parse_null::<i32>("not null"),
+            Err(nom::Err::Error(nom::error::Error::new(
+                "not null",
+                error::ErrorKind::Tag
             )))
         )
     }
