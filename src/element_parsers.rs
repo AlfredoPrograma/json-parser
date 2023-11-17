@@ -1,8 +1,24 @@
-use nom::{bytes::complete::tag, sequence::separated_pair, IResult, Parser};
+use nom::{branch::alt, bytes::complete::tag, sequence::separated_pair, IResult, Parser};
 
-use crate::primitive_parsers::parse_string;
+use crate::{
+    elements::ElementKind,
+    primitive_parsers::{parse_bool, parse_float, parse_integer, parse_string},
+};
 
-pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (&str, &str)> {
+pub fn parse_value<'a, T>() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+    |input| {
+        alt((
+            parse_string(),
+            parse_integer(),
+            parse_float(),
+            parse_bool(),
+            // parse_null(),
+        ))
+        .parse(input)
+    }
+}
+
+pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (ElementKind, ElementKind)> {
     |input| separated_pair(parse_string(), tag(": "), parse_string()).parse(input)
 }
 
@@ -10,18 +26,30 @@ pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (&str, &str)> {
 mod tests {
     use nom::Parser;
 
-    use crate::element_parsers::parse_key_value;
+    use crate::{element_parsers::parse_key_value, elements::ElementKind};
 
     #[test]
     fn test_parse_key() {
         assert_eq!(
             parse_key_value().parse("\"name\": \"Alfredo\""),
-            Ok(("", ("name", "Alfredo")))
+            Ok((
+                "",
+                (
+                    ElementKind::String("name".to_string()),
+                    ElementKind::String("Alfredo".to_string())
+                )
+            ))
         );
 
         assert_eq!(
             parse_key_value().parse("\"name\": \"Alfredo\"\n ...other key value pairs"),
-            Ok(("\n ...other key value pairs", ("name", "Alfredo")))
+            Ok((
+                "\n ...other key value pairs",
+                (
+                    ElementKind::String("name".to_string()),
+                    ElementKind::String("Alfredo".to_string())
+                )
+            ))
         );
 
         assert_eq!(
