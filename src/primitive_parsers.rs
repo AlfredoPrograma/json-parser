@@ -41,8 +41,14 @@ pub fn parse_integer() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
 
 pub fn parse_float() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     |input| {
-        float(input)
-            .map(|(next_input, value)| (next_input, ElementKind::Number(NumberKind::Float(value))))
+        opt(char('-')).parse(input).and_then(|(next_input, _)| {
+            delimited(digit1, tag("."), digit1)
+                .parse(next_input)
+                .and_then(|_| float(input))
+                .map(|(next_input, float)| {
+                    (next_input, ElementKind::Number(NumberKind::Float(float)))
+                })
+        })
     }
 }
 
@@ -160,14 +166,14 @@ mod tests {
             parse_float().parse(""),
             Err(nom::Err::Error(nom::error::Error::new(
                 "",
-                error::ErrorKind::Float
+                error::ErrorKind::Digit
             )))
         );
         assert_eq!(
             parse_float().parse("not a number"),
             Err(nom::Err::Error(nom::error::Error::new(
                 "not a number",
-                error::ErrorKind::Float
+                error::ErrorKind::Digit
             )))
         )
     }

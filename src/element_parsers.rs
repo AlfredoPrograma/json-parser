@@ -5,12 +5,12 @@ use crate::{
     primitive_parsers::{parse_bool, parse_float, parse_integer, parse_string},
 };
 
-pub fn parse_value<'a, T>() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     |input| {
         alt((
             parse_string(),
-            parse_integer(),
             parse_float(),
+            parse_integer(),
             parse_bool(),
             // parse_null(),
         ))
@@ -26,7 +26,46 @@ pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (ElementKind, Elem
 mod tests {
     use nom::Parser;
 
-    use crate::{element_parsers::parse_key_value, elements::ElementKind};
+    use crate::{
+        element_parsers::{parse_key_value, parse_value},
+        elements::{ElementKind, NumberKind},
+    };
+
+    #[test]
+    fn test_parse_value() {
+        // Parsing `string` value
+        assert_eq!(
+            parse_value().parse("\"hello world\" ...rest"),
+            Ok((" ...rest", ElementKind::String("hello world".to_string())))
+        );
+
+        // Parsing `integer` value
+        assert_eq!(
+            parse_value().parse("115 ...rest"),
+            Ok((" ...rest", ElementKind::Number(NumberKind::Integer(115))))
+        );
+
+        // Parsing `float` value
+        assert_eq!(
+            parse_value().parse("-10.99 ...rest"),
+            Ok((" ...rest", ElementKind::Number(NumberKind::Float(-10.99))))
+        );
+
+        // Parsing `boolean` value
+        assert_eq!(
+            parse_value().parse("true ...rest"),
+            Ok((" ...rest", ElementKind::Boolean(true)))
+        );
+
+        // Throwing error when try to parse invalid value
+        assert_eq!(
+            parse_value().parse("invalid value"),
+            Err(nom::Err::Error(nom::error::Error::new(
+                "invalid value",
+                nom::error::ErrorKind::Tag
+            )))
+        )
+    }
 
     #[test]
     fn test_parse_key() {
