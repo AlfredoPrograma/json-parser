@@ -77,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_key() {
+    fn test_parse_key_value() {
         assert_eq!(
             parse_key_value().parse("\"name\": \"Alfredo\""),
             Ok((
