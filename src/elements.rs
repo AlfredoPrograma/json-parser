@@ -1,3 +1,7 @@
+use nom::{IResult, Parser};
+
+use crate::element_parsers::parse_key_value;
+
 #[derive(PartialEq, Debug)]
 pub enum NumberKind {
     Integer(i32),
@@ -22,8 +26,21 @@ pub enum ComposedElementKind<T> {
     Simple(ElementKind),
 }
 
-pub struct Element<T> {
-    kind: ComposedElementKind<T>,
+pub struct Element {
+    kind: ElementKind,
     key: String,
-    value: T,
+}
+
+impl Element {
+    fn new(key: String, kind: ElementKind) -> Element {
+        Element { key, kind }
+    }
+}
+
+pub fn build_element<T>() -> impl FnMut(&str) -> IResult<&str, Element> {
+    |input| {
+        parse_key_value()
+            .parse(input)
+            .map(|(next_input, (key, value))| (next_input, Element::new(key, value)))
+    }
 }

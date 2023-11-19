@@ -18,8 +18,17 @@ pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     }
 }
 
-pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (ElementKind, ElementKind)> {
-    |input| separated_pair(parse_string(), tag(": "), parse_string()).parse(input)
+pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, ElementKind)> {
+    |input| {
+        separated_pair(parse_string(), tag(": "), parse_value())
+            .parse(input)
+            .map(|(next_input, (key, value))| match key {
+                ElementKind::String(k) => (next_input, (k, value)),
+
+                // Parse string always returns a `ElementKind::String`, so other variants will never be reachable
+                _ => unreachable!(),
+            })
+    }
 }
 
 #[cfg(test)]
@@ -74,20 +83,39 @@ mod tests {
             Ok((
                 "",
                 (
-                    ElementKind::String("name".to_string()),
+                    "name".to_string(),
                     ElementKind::String("Alfredo".to_string())
                 )
             ))
         );
 
         assert_eq!(
-            parse_key_value().parse("\"name\": \"Alfredo\"\n ...other key value pairs"),
+            parse_key_value().parse("\"temp\": -99\n ...other key value pairs"),
             Ok((
                 "\n ...other key value pairs",
                 (
-                    ElementKind::String("name".to_string()),
-                    ElementKind::String("Alfredo".to_string())
+                    "temp".to_string(),
+                    ElementKind::Number(NumberKind::Integer(-99))
                 )
+            ))
+        );
+
+        assert_eq!(
+            parse_key_value().parse("\"price\": 25.25\n ...other key value pairs"),
+            Ok((
+                "\n ...other key value pairs",
+                (
+                    "price".to_string(),
+                    ElementKind::Number(NumberKind::Float(25.25))
+                )
+            ))
+        );
+
+        assert_eq!(
+            parse_key_value().parse("\"isActive\": true\n ...other key value pairs"),
+            Ok((
+                "\n ...other key value pairs",
+                ("isActive".to_string(), ElementKind::Boolean(true))
             ))
         );
 
