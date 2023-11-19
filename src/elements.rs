@@ -13,6 +13,7 @@ pub enum ElementKind {
     Boolean(bool),
     Number(NumberKind),
     String(String),
+    Array(Vec<ElementKind>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -48,7 +49,7 @@ pub fn build_element() -> impl FnMut(&str) -> IResult<&str, Element> {
 
 #[cfg(test)]
 mod tests {
-    use nom::{Err, Parser};
+    use nom::Parser;
 
     use crate::elements::{build_element, Element, ElementKind, NumberKind};
 
@@ -94,5 +95,21 @@ mod tests {
                 Element::new("isActive".to_string(), ElementKind::Boolean(false))
             ))
         );
+
+        assert_eq!(
+            build_element().parse("\"elements\": [\"array\", 123, -10.5, false]"),
+            Ok((
+                "",
+                Element::new(
+                    "elements".to_string(),
+                    ElementKind::Array(vec![
+                        ElementKind::String("array".to_string()),
+                        ElementKind::Number(NumberKind::Integer(123)),
+                        ElementKind::Number(NumberKind::Float(-10.5)),
+                        ElementKind::Boolean(false),
+                    ])
+                )
+            ))
+        )
     }
 }

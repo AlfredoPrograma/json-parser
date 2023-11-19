@@ -13,8 +13,12 @@ pub fn parse_array_values() -> impl FnMut(&str) -> IResult<&str, Vec<ElementKind
     |input| separated_list0(tag(", "), parse_value()).parse(input)
 }
 
-pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, Vec<ElementKind>> {
-    |input| delimited(char('['), parse_array_values(), char(']')).parse(input)
+pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+    |input| {
+        delimited(char('['), parse_array_values(), char(']'))
+            .parse(input)
+            .map(|(next_input, arr)| (next_input, ElementKind::Array(arr)))
+    }
 }
 
 #[cfg(test)]
@@ -54,14 +58,14 @@ mod tests {
             parse_array().parse(array),
             Ok((
                 "",
-                vec![
+                ElementKind::Array(vec![
                     ElementKind::String("hello".to_string()),
                     ElementKind::Number(NumberKind::Float(-100.10)),
                     ElementKind::Number(NumberKind::Integer(10)),
                     ElementKind::Number(NumberKind::Float(25.5)),
                     ElementKind::Boolean(false),
                     ElementKind::String("world".to_string()),
-                ]
+                ])
             ))
         );
 

@@ -2,6 +2,7 @@ use nom::{branch::alt, bytes::complete::tag, sequence::separated_pair, IResult, 
 
 use crate::{
     elements::ElementKind,
+    object_parsers::parse_array,
     primitive_parsers::{parse_bool, parse_float, parse_integer, parse_string},
 };
 
@@ -12,6 +13,7 @@ pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
             parse_float(),
             parse_integer(),
             parse_bool(),
+            parse_array(),
             // parse_null(),
         ))
         .parse(input)
@@ -66,12 +68,26 @@ mod tests {
             Ok((" ...rest", ElementKind::Boolean(true)))
         );
 
+        // Parsing `array` value
+        assert_eq!(
+            parse_value().parse("[\"array\", 123, -10.5, false]"),
+            Ok((
+                "",
+                ElementKind::Array(vec![
+                    ElementKind::String("array".to_string()),
+                    ElementKind::Number(NumberKind::Integer(123)),
+                    ElementKind::Number(NumberKind::Float(-10.5)),
+                    ElementKind::Boolean(false),
+                ])
+            ))
+        );
+
         // Throwing error when try to parse invalid value
         assert_eq!(
             parse_value().parse("invalid value"),
             Err(nom::Err::Error(nom::error::Error::new(
                 "invalid value",
-                nom::error::ErrorKind::Tag
+                nom::error::ErrorKind::Char
             )))
         )
     }
@@ -117,6 +133,31 @@ mod tests {
                 "\n ...other key value pairs",
                 ("isActive".to_string(), ElementKind::Boolean(true))
             ))
+        );
+
+        assert_eq!(
+            parse_key_value().parse("\"elements\": [\"array\", 123, -10.5, false]"),
+            Ok((
+                "",
+                (
+                    "elements".to_string(),
+                    ElementKind::Array(vec![
+                        ElementKind::String("array".to_string()),
+                        ElementKind::Number(NumberKind::Integer(123)),
+                        ElementKind::Number(NumberKind::Float(-10.5)),
+                        ElementKind::Boolean(false),
+                    ])
+                )
+            ))
+        );
+
+        // Throwing error when try to parse invalid value
+        assert_eq!(
+            parse_value().parse("invalid value"),
+            Err(nom::Err::Error(nom::error::Error::new(
+                "invalid value",
+                nom::error::ErrorKind::Char
+            )))
         );
 
         assert_eq!(
