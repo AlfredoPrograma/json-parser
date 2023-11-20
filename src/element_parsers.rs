@@ -3,7 +3,7 @@ use nom::{branch::alt, bytes::complete::tag, sequence::separated_pair, IResult, 
 use crate::{
     elements::ElementKind,
     object_parsers::parse_array,
-    primitive_parsers::{parse_bool, parse_float, parse_integer, parse_string},
+    primitive_parsers::{parse_bool, parse_float, parse_integer, parse_null, parse_string},
 };
 
 pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {

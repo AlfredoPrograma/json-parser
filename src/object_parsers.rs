@@ -1,17 +1,15 @@
-// ["Hello", 1234, 11.2, false]
-
-use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::char;
-use nom::multi::{many0, separated_list0};
-use nom::sequence::{delimited, preceded, terminated};
+use nom::multi::separated_list0;
+use nom::sequence::{delimited, pair, preceded, terminated};
 use nom::{IResult, Parser};
 
 use crate::element_parsers::{parse_key_value, parse_value};
 use crate::elements::ElementKind;
+use crate::utils::consume_spaces;
 
 pub fn parse_array_values() -> impl FnMut(&str) -> IResult<&str, Vec<ElementKind>> {
-    |input| separated_list0(tag(", "), parse_value()).parse(input)
+    |input| separated_list0(terminated(tag(", "), consume_spaces()), parse_value()).parse(input)
 }
 
 pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
@@ -25,9 +23,9 @@ pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
 pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     |input| {
         delimited(
-            terminated(char('{'), many0(alt((char('\n'), char(' '))))),
-            separated_list0(tag(",\n"), parse_key_value()),
-            preceded(many0(alt((char('\n'), char(' ')))), char('}')),
+            terminated(char('{'), consume_spaces()),
+            separated_list0(pair(tag(","), consume_spaces()), parse_key_value()),
+            preceded(consume_spaces(), char('}')),
         )
         .parse(input)
         .map(|(next_input, elements)| (next_input, ElementKind::Object(elements)))
