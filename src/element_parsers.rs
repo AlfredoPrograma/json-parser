@@ -7,7 +7,7 @@ use nom::{
 
 use crate::{
     elements::ElementKind,
-    object_parsers::parse_array,
+    object_parsers::{parse_array, parse_object},
     primitive_parsers::{parse_bool, parse_float, parse_integer, parse_null, parse_string},
     utils::consume_spaces,
 };
@@ -20,6 +20,7 @@ pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
             parse_integer(),
             parse_bool(),
             parse_array(),
+            parse_object(),
             parse_null(),
         ))
         .parse(input)
@@ -30,7 +31,7 @@ pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, ElementKi
     |input| {
         separated_pair(
             parse_string(),
-            terminated(tag(": "), consume_spaces()),
+            terminated(tag(":"), consume_spaces()),
             parse_value(),
         )
         .parse(input)
@@ -88,6 +89,24 @@ mod tests {
                     ElementKind::Number(NumberKind::Integer(123)),
                     ElementKind::Number(NumberKind::Float(-10.5)),
                     ElementKind::Boolean(false),
+                ])
+            ))
+        );
+
+        // Parsin `object` value
+        assert_eq!(
+            parse_value().parse("{\"name\": \"Alfredo\", \"age\": 25}"),
+            Ok((
+                "",
+                ElementKind::Object(vec![
+                    (
+                        "name".to_string(),
+                        ElementKind::String("Alfredo".to_string())
+                    ),
+                    (
+                        "age".to_string(),
+                        ElementKind::Number(NumberKind::Integer(25))
+                    )
                 ])
             ))
         );

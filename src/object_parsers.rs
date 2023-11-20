@@ -14,9 +14,13 @@ pub fn parse_array_values() -> impl FnMut(&str) -> IResult<&str, Vec<ElementKind
 
 pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     |input| {
-        delimited(char('['), parse_array_values(), char(']'))
-            .parse(input)
-            .map(|(next_input, arr)| (next_input, ElementKind::Array(arr)))
+        delimited(
+            terminated(char('['), consume_spaces()),
+            parse_array_values(),
+            preceded(consume_spaces(), char(']')),
+        )
+        .parse(input)
+        .map(|(next_input, arr)| (next_input, ElementKind::Array(arr)))
     }
 }
 
