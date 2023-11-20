@@ -14,6 +14,7 @@ pub enum ElementKind {
     Number(NumberKind),
     String(String),
     Array(Vec<ElementKind>),
+    Object(Vec<(String, ElementKind)>),
     Null(Box<Option<ElementKind>>),
 }
 
