@@ -8,10 +8,10 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::elements::{ElementKind, GenericElementKind, NumberKind};
+use crate::elements::{ElementKind, NumberKind};
 
 // TODO: evaluate internal string value in an stricter way
-pub fn parse_string<'a>() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_string() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     |input| {
         delimited(char('"'), take_until("\""), char('"'))
             .parse(input)
@@ -68,11 +68,11 @@ pub fn parse_bool() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     }
 }
 
-pub fn parse_null<T>() -> impl FnMut(&str) -> IResult<&str, GenericElementKind<T>> {
+pub fn parse_null() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     |input| {
         tag("null")
             .parse(input)
-            .map(|(next_input, _)| (next_input, GenericElementKind::Null(None)))
+            .map(|(next_input, _)| (next_input, ElementKind::Null(Box::new(None))))
     }
 }
 
@@ -82,7 +82,7 @@ mod tests {
     use nom::{error, Parser};
 
     use crate::{
-        elements::{ElementKind, GenericElementKind, NumberKind},
+        elements::{ElementKind, NumberKind},
         primitive_parsers::parse_float,
     };
 
@@ -206,16 +206,16 @@ mod tests {
     #[test]
     fn test_parse_null() {
         assert_eq!(
-            parse_null::<String>().parse("null"),
-            Ok(("", GenericElementKind::Null(None)))
+            parse_null().parse("null"),
+            Ok(("", ElementKind::Null(Box::new(None))))
         );
         assert_eq!(
-            parse_null::<String>().parse("null ...another text"),
-            Ok((" ...another text", GenericElementKind::Null(None)))
+            parse_null().parse("null ...another text"),
+            Ok((" ...another text", ElementKind::Null(Box::new(None))))
         );
 
         assert_eq!(
-            parse_null::<i32>().parse("not null"),
+            parse_null().parse("not null"),
             Err(nom::Err::Error(nom::error::Error::new(
                 "not null",
                 error::ErrorKind::Tag

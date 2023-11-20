@@ -14,17 +14,7 @@ pub enum ElementKind {
     Number(NumberKind),
     String(String),
     Array(Vec<ElementKind>),
-}
-
-#[derive(PartialEq, Debug)]
-pub enum GenericElementKind<T> {
-    Null(Option<T>),
-}
-
-#[derive(PartialEq, Debug)]
-pub enum ComposedElementKind<T> {
-    Generic(GenericElementKind<T>),
-    Simple(ElementKind),
+    Null(Box<Option<ElementKind>>),
 }
 
 #[derive(PartialEq, Debug)]
