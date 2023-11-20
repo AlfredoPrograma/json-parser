@@ -1,9 +1,10 @@
 // ["Hello", 1234, 11.2, false]
 
+use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::char;
-use nom::multi::separated_list0;
-use nom::sequence::delimited;
+use nom::multi::{many0, separated_list0};
+use nom::sequence::{delimited, preceded, terminated};
 use nom::{IResult, Parser};
 
 use crate::element_parsers::{parse_key_value, parse_value};
@@ -24,9 +25,9 @@ pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
 pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     |input| {
         delimited(
-            char('{'),
+            terminated(char('{'), many0(alt((char('\n'), char(' '))))),
             separated_list0(tag(",\n"), parse_key_value()),
-            char('}'),
+            preceded(many0(alt((char('\n'), char(' ')))), char('}')),
         )
         .parse(input)
         .map(|(next_input, elements)| (next_input, ElementKind::Object(elements)))
@@ -97,7 +98,7 @@ mod tests {
     #[test]
     fn test_parse_object() {
         let object =
-            "{\"name\": \"Alfredo Arvelaez\",\n\"age\": 22,\n\"temps\": [15.5, -10, 25.5]}";
+            "{\n\"name\": \"Alfredo Arvelaez\",\n\"age\": 22,\n\"temps\": [15.5, -10, 25.5]\n}";
 
         assert_eq!(
             parse_object().parse(object),
