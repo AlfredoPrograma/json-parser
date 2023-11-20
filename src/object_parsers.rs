@@ -5,9 +5,8 @@ use nom::multi::separated_list0;
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
 use nom::{IResult, Parser};
 
-use crate::prelude::JsonValue;
+use crate::prelude::{consume_spaces, JsonValue};
 use crate::primitive_parsers::{parse_bool, parse_float, parse_integer, parse_null, parse_string};
-use crate::utils::consume_spaces;
 
 pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
