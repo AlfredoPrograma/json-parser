@@ -5,7 +5,7 @@ use nom::sequence::{delimited, pair, preceded, terminated};
 use nom::{IResult, Parser};
 
 use crate::element_parsers::{parse_key_value, parse_value};
-use crate::elements::JsonValue;
+use crate::prelude::JsonValue;
 use crate::utils::consume_spaces;
 
 pub fn parse_array_values() -> impl FnMut(&str) -> IResult<&str, Vec<JsonValue>> {
@@ -43,8 +43,8 @@ mod tests {
     use nom::Parser;
 
     use crate::{
-        elements::{JsonValue, NumberType},
         object_parsers::{parse_array, parse_array_values, parse_object},
+        prelude::{JsonValue, NumberType},
     };
 
     #[test]

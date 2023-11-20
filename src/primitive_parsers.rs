@@ -8,7 +8,7 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::elements::{JsonValue, NumberType};
+use crate::prelude::{JsonValue, NumberType};
 
 // TODO: evaluate internal string value in an stricter way
 pub fn parse_string() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
@@ -80,7 +80,7 @@ mod tests {
     use nom::{error, Parser};
 
     use crate::{
-        elements::{JsonValue, NumberType},
+        prelude::{JsonValue, NumberType},
         primitive_parsers::parse_float,
     };
 

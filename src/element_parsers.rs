@@ -6,8 +6,8 @@ use nom::{
 };
 
 use crate::{
-    elements::JsonValue,
     object_parsers::{parse_array, parse_object},
+    prelude::JsonValue,
     primitive_parsers::{parse_bool, parse_float, parse_integer, parse_null, parse_string},
     utils::consume_spaces,
 };
@@ -50,7 +50,7 @@ mod tests {
 
     use crate::{
         element_parsers::{parse_key_value, parse_value},
-        elements::{JsonValue, NumberType},
+        prelude::{JsonValue, NumberType},
     };
 
     #[test]
