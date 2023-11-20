@@ -6,13 +6,13 @@ use nom::{
 };
 
 use crate::{
-    elements::ElementKind,
+    elements::JsonValue,
     object_parsers::{parse_array, parse_object},
     primitive_parsers::{parse_bool, parse_float, parse_integer, parse_null, parse_string},
     utils::consume_spaces,
 };
 
-pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         alt((
             parse_string(),
@@ -27,7 +27,7 @@ pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
     }
 }
 
-pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, ElementKind)> {
+pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, JsonValue)> {
     |input| {
         separated_pair(
             parse_string(),
@@ -36,7 +36,7 @@ pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, ElementKi
         )
         .parse(input)
         .map(|(next_input, (key, value))| match key {
-            ElementKind::String(k) => (next_input, (k, value)),
+            JsonValue::String(k) => (next_input, (k, value)),
 
             // Parse string always returns a `ElementKind::String`, so other variants will never be reachable
             _ => unreachable!(),
@@ -50,7 +50,7 @@ mod tests {
 
     use crate::{
         element_parsers::{parse_key_value, parse_value},
-        elements::{ElementKind, NumberKind},
+        elements::{JsonValue, NumberType},
     };
 
     #[test]
@@ -58,25 +58,25 @@ mod tests {
         // Parsing `string` value
         assert_eq!(
             parse_value().parse("\"hello world\" ...rest"),
-            Ok((" ...rest", ElementKind::String("hello world".to_string())))
+            Ok((" ...rest", JsonValue::String("hello world".to_string())))
         );
 
         // Parsing `integer` value
         assert_eq!(
             parse_value().parse("115 ...rest"),
-            Ok((" ...rest", ElementKind::Number(NumberKind::Integer(115))))
+            Ok((" ...rest", JsonValue::Number(NumberType::Integer(115))))
         );
 
         // Parsing `float` value
         assert_eq!(
             parse_value().parse("-10.99 ...rest"),
-            Ok((" ...rest", ElementKind::Number(NumberKind::Float(-10.99))))
+            Ok((" ...rest", JsonValue::Number(NumberType::Float(-10.99))))
         );
 
         // Parsing `boolean` value
         assert_eq!(
             parse_value().parse("true ...rest"),
-            Ok((" ...rest", ElementKind::Boolean(true)))
+            Ok((" ...rest", JsonValue::Boolean(true)))
         );
 
         // Parsing `array` value
@@ -84,11 +84,11 @@ mod tests {
             parse_value().parse("[\"array\", 123, -10.5, false]"),
             Ok((
                 "",
-                ElementKind::Array(vec![
-                    ElementKind::String("array".to_string()),
-                    ElementKind::Number(NumberKind::Integer(123)),
-                    ElementKind::Number(NumberKind::Float(-10.5)),
-                    ElementKind::Boolean(false),
+                JsonValue::Array(vec![
+                    JsonValue::String("array".to_string()),
+                    JsonValue::Number(NumberType::Integer(123)),
+                    JsonValue::Number(NumberType::Float(-10.5)),
+                    JsonValue::Boolean(false),
                 ])
             ))
         );
@@ -98,14 +98,11 @@ mod tests {
             parse_value().parse("{\"name\": \"Alfredo\", \"age\": 25}"),
             Ok((
                 "",
-                ElementKind::Object(vec![
-                    (
-                        "name".to_string(),
-                        ElementKind::String("Alfredo".to_string())
-                    ),
+                JsonValue::Object(vec![
+                    ("name".to_string(), JsonValue::String("Alfredo".to_string())),
                     (
                         "age".to_string(),
-                        ElementKind::Number(NumberKind::Integer(25))
+                        JsonValue::Number(NumberType::Integer(25))
                     )
                 ])
             ))
@@ -128,10 +125,7 @@ mod tests {
             parse_key_value().parse("\"name\": \"Alfredo\""),
             Ok((
                 "",
-                (
-                    "name".to_string(),
-                    ElementKind::String("Alfredo".to_string())
-                )
+                ("name".to_string(), JsonValue::String("Alfredo".to_string()))
             ))
         );
 
@@ -141,7 +135,7 @@ mod tests {
                 "\n ...other key value pairs",
                 (
                     "temp".to_string(),
-                    ElementKind::Number(NumberKind::Integer(-99))
+                    JsonValue::Number(NumberType::Integer(-99))
                 )
             ))
         );
@@ -152,7 +146,7 @@ mod tests {
                 "\n ...other key value pairs",
                 (
                     "price".to_string(),
-                    ElementKind::Number(NumberKind::Float(25.25))
+                    JsonValue::Number(NumberType::Float(25.25))
                 )
             ))
         );
@@ -161,7 +155,7 @@ mod tests {
             parse_key_value().parse("\"isActive\": true\n ...other key value pairs"),
             Ok((
                 "\n ...other key value pairs",
-                ("isActive".to_string(), ElementKind::Boolean(true))
+                ("isActive".to_string(), JsonValue::Boolean(true))
             ))
         );
 
@@ -171,11 +165,11 @@ mod tests {
                 "",
                 (
                     "elements".to_string(),
-                    ElementKind::Array(vec![
-                        ElementKind::String("array".to_string()),
-                        ElementKind::Number(NumberKind::Integer(123)),
-                        ElementKind::Number(NumberKind::Float(-10.5)),
-                        ElementKind::Boolean(false),
+                    JsonValue::Array(vec![
+                        JsonValue::String("array".to_string()),
+                        JsonValue::Number(NumberType::Integer(123)),
+                        JsonValue::Number(NumberType::Float(-10.5)),
+                        JsonValue::Boolean(false),
                     ])
                 )
             ))

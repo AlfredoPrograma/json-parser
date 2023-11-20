@@ -1,15 +1,15 @@
 #[derive(PartialEq, Debug)]
-pub enum NumberKind {
+pub enum NumberType {
     Integer(i32),
     Float(f32),
 }
 
 #[derive(PartialEq, Debug)]
-pub enum ElementKind {
+pub enum JsonValue {
     Boolean(bool),
-    Number(NumberKind),
+    Number(NumberType),
     String(String),
-    Array(Vec<ElementKind>),
-    Object(Vec<(String, ElementKind)>),
-    Null(Box<Option<ElementKind>>),
+    Array(Vec<JsonValue>),
+    Object(Vec<(String, JsonValue)>),
+    Null(Box<Option<JsonValue>>),
 }

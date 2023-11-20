@@ -5,14 +5,14 @@ use nom::sequence::{delimited, pair, preceded, terminated};
 use nom::{IResult, Parser};
 
 use crate::element_parsers::{parse_key_value, parse_value};
-use crate::elements::ElementKind;
+use crate::elements::JsonValue;
 use crate::utils::consume_spaces;
 
-pub fn parse_array_values() -> impl FnMut(&str) -> IResult<&str, Vec<ElementKind>> {
+pub fn parse_array_values() -> impl FnMut(&str) -> IResult<&str, Vec<JsonValue>> {
     |input| separated_list0(terminated(tag(", "), consume_spaces()), parse_value()).parse(input)
 }
 
-pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         delimited(
             terminated(char('['), consume_spaces()),
@@ -20,11 +20,11 @@ pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
             preceded(consume_spaces(), char(']')),
         )
         .parse(input)
-        .map(|(next_input, arr)| (next_input, ElementKind::Array(arr)))
+        .map(|(next_input, arr)| (next_input, JsonValue::Array(arr)))
     }
 }
 
-pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         delimited(
             terminated(char('{'), consume_spaces()),
@@ -32,7 +32,7 @@ pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
             preceded(consume_spaces(), char('}')),
         )
         .parse(input)
-        .map(|(next_input, elements)| (next_input, ElementKind::Object(elements)))
+        .map(|(next_input, elements)| (next_input, JsonValue::Object(elements)))
     }
 }
 
@@ -43,7 +43,7 @@ mod tests {
     use nom::Parser;
 
     use crate::{
-        elements::{ElementKind, NumberKind},
+        elements::{JsonValue, NumberType},
         object_parsers::{parse_array, parse_array_values, parse_object},
     };
 
@@ -56,12 +56,12 @@ mod tests {
             Ok((
                 " ...other key values",
                 vec![
-                    ElementKind::String("hello".to_string()),
-                    ElementKind::Number(NumberKind::Float(-100.10)),
-                    ElementKind::Number(NumberKind::Integer(10)),
-                    ElementKind::Number(NumberKind::Float(25.5)),
-                    ElementKind::Boolean(false),
-                    ElementKind::String("world".to_string()),
+                    JsonValue::String("hello".to_string()),
+                    JsonValue::Number(NumberType::Float(-100.10)),
+                    JsonValue::Number(NumberType::Integer(10)),
+                    JsonValue::Number(NumberType::Float(25.5)),
+                    JsonValue::Boolean(false),
+                    JsonValue::String("world".to_string()),
                 ]
             ))
         )
@@ -75,13 +75,13 @@ mod tests {
             parse_array().parse(array),
             Ok((
                 "",
-                ElementKind::Array(vec![
-                    ElementKind::String("hello".to_string()),
-                    ElementKind::Number(NumberKind::Float(-100.10)),
-                    ElementKind::Number(NumberKind::Integer(10)),
-                    ElementKind::Number(NumberKind::Float(25.5)),
-                    ElementKind::Boolean(false),
-                    ElementKind::String("world".to_string()),
+                JsonValue::Array(vec![
+                    JsonValue::String("hello".to_string()),
+                    JsonValue::Number(NumberType::Float(-100.10)),
+                    JsonValue::Number(NumberType::Integer(10)),
+                    JsonValue::Number(NumberType::Float(25.5)),
+                    JsonValue::Boolean(false),
+                    JsonValue::String("world".to_string()),
                 ])
             ))
         );
@@ -106,21 +106,21 @@ mod tests {
             parse_object().parse(object),
             Ok((
                 "",
-                ElementKind::Object(vec![
+                JsonValue::Object(vec![
                     (
                         "name".to_string(),
-                        ElementKind::String("Alfredo Arvelaez".to_string())
+                        JsonValue::String("Alfredo Arvelaez".to_string())
                     ),
                     (
                         "age".to_string(),
-                        ElementKind::Number(NumberKind::Integer(22))
+                        JsonValue::Number(NumberType::Integer(22))
                     ),
                     (
                         "temps".to_string(),
-                        ElementKind::Array(vec![
-                            ElementKind::Number(NumberKind::Float(15.5)),
-                            ElementKind::Number(NumberKind::Integer(-10)),
-                            ElementKind::Number(NumberKind::Float(25.5))
+                        JsonValue::Array(vec![
+                            JsonValue::Number(NumberType::Float(15.5)),
+                            JsonValue::Number(NumberType::Integer(-10)),
+                            JsonValue::Number(NumberType::Float(25.5))
                         ])
                     )
                 ])
@@ -131,7 +131,7 @@ mod tests {
 
         assert_eq!(
             parse_object().parse(empty_object),
-            Ok(("", ElementKind::Object(vec![])))
+            Ok(("", JsonValue::Object(vec![])))
         )
     }
 }

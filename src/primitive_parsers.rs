@@ -8,18 +8,18 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::elements::{ElementKind, NumberKind};
+use crate::elements::{JsonValue, NumberType};
 
 // TODO: evaluate internal string value in an stricter way
-pub fn parse_string() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_string() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         delimited(char('"'), take_until("\""), char('"'))
             .parse(input)
-            .map(|(next_input, value)| (next_input, ElementKind::String(value.to_string())))
+            .map(|(next_input, value)| (next_input, JsonValue::String(value.to_string())))
     }
 }
 
-pub fn parse_integer() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_integer() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         opt(char('-'))
             .parse(input)
@@ -33,26 +33,24 @@ pub fn parse_integer() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
                     }
                 })
             })
-            .map(|(next_input, value)| {
-                (next_input, ElementKind::Number(NumberKind::Integer(value)))
-            })
+            .map(|(next_input, value)| (next_input, JsonValue::Number(NumberType::Integer(value))))
     }
 }
 
-pub fn parse_float() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_float() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         opt(char('-')).parse(input).and_then(|(next_input, _)| {
             delimited(digit1, tag("."), digit1)
                 .parse(next_input)
                 .and_then(|_| float(input))
                 .map(|(next_input, float)| {
-                    (next_input, ElementKind::Number(NumberKind::Float(float)))
+                    (next_input, JsonValue::Number(NumberType::Float(float)))
                 })
         })
     }
 }
 
-pub fn parse_bool() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_bool() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         alt((tag("true"), tag("false")))
             .parse(input)
@@ -64,15 +62,15 @@ pub fn parse_bool() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
                 // Finally, with those two options, we can match the `str_bool` to boolean values without risk
                 _ => unreachable!(),
             })
-            .map(|(next_input, value)| (next_input, ElementKind::Boolean(value)))
+            .map(|(next_input, value)| (next_input, JsonValue::Boolean(value)))
     }
 }
 
-pub fn parse_null() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
+pub fn parse_null() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
     |input| {
         tag("null")
             .parse(input)
-            .map(|(next_input, _)| (next_input, ElementKind::Null(Box::new(None))))
+            .map(|(next_input, _)| (next_input, JsonValue::Null(Box::new(None))))
     }
 }
 
@@ -82,7 +80,7 @@ mod tests {
     use nom::{error, Parser};
 
     use crate::{
-        elements::{ElementKind, NumberKind},
+        elements::{JsonValue, NumberType},
         primitive_parsers::parse_float,
     };
 
@@ -92,11 +90,11 @@ mod tests {
     fn test_parse_string() {
         assert_eq!(
             parse_string().parse("\"this is a string\""),
-            Ok(("", ElementKind::String("this is a string".to_string())))
+            Ok(("", JsonValue::String("this is a string".to_string())))
         );
         assert_eq!(
             parse_string().parse("\"other string\", ..."),
-            Ok((", ...", ElementKind::String("other string".to_string())))
+            Ok((", ...", JsonValue::String("other string".to_string())))
         );
 
         assert_eq!(
@@ -112,19 +110,16 @@ mod tests {
     fn test_parse_integer() {
         assert_eq!(
             parse_integer().parse("2001"),
-            Ok(("", ElementKind::Number(NumberKind::Integer(2001))))
+            Ok(("", JsonValue::Number(NumberType::Integer(2001))))
         );
         assert_eq!(
             parse_integer().parse("2001 ...continue"),
-            Ok((
-                " ...continue",
-                ElementKind::Number(NumberKind::Integer(2001))
-            ))
+            Ok((" ...continue", JsonValue::Number(NumberType::Integer(2001))))
         );
 
         assert_eq!(
             parse_integer().parse("-9999 uwu"),
-            Ok((" uwu", ElementKind::Number(NumberKind::Integer(-9999))))
+            Ok((" uwu", JsonValue::Number(NumberType::Integer(-9999))))
         );
 
         assert_eq!(
@@ -147,19 +142,19 @@ mod tests {
     fn test_parse_float() {
         assert_eq!(
             parse_float().parse("2001.22"),
-            Ok(("", ElementKind::Number(NumberKind::Float(2001.22))))
+            Ok(("", JsonValue::Number(NumberType::Float(2001.22))))
         );
         assert_eq!(
             parse_float().parse("2001.99 ...continue"),
             Ok((
                 " ...continue",
-                ElementKind::Number(NumberKind::Float(2001.99))
+                JsonValue::Number(NumberType::Float(2001.99))
             ))
         );
 
         assert_eq!(
             parse_float().parse("-9999.2134 uwu"),
-            Ok((" uwu", ElementKind::Number(NumberKind::Float(-9999.2134))))
+            Ok((" uwu", JsonValue::Number(NumberType::Float(-9999.2134))))
         );
 
         assert_eq!(
@@ -182,16 +177,16 @@ mod tests {
     fn test_parse_bool() {
         assert_eq!(
             parse_bool().parse("true"),
-            Ok(("", ElementKind::Boolean(true)))
+            Ok(("", JsonValue::Boolean(true)))
         );
         assert_eq!(
             parse_bool().parse("false"),
-            Ok(("", ElementKind::Boolean(false)))
+            Ok(("", JsonValue::Boolean(false)))
         );
 
         assert_eq!(
             parse_bool().parse("true ...and other content"),
-            Ok((" ...and other content", ElementKind::Boolean(true)))
+            Ok((" ...and other content", JsonValue::Boolean(true)))
         );
 
         assert_eq!(
@@ -207,11 +202,11 @@ mod tests {
     fn test_parse_null() {
         assert_eq!(
             parse_null().parse("null"),
-            Ok(("", ElementKind::Null(Box::new(None))))
+            Ok(("", JsonValue::Null(Box::new(None))))
         );
         assert_eq!(
             parse_null().parse("null ...another text"),
-            Ok((" ...another text", ElementKind::Null(Box::new(None))))
+            Ok((" ...another text", JsonValue::Null(Box::new(None))))
         );
 
         assert_eq!(
