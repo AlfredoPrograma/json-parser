@@ -14,7 +14,7 @@ pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
             parse_integer(),
             parse_bool(),
             parse_array(),
-            // parse_null(),
+            parse_null(),
         ))
         .parse(input)
     }
@@ -82,12 +82,13 @@ mod tests {
             ))
         );
 
+        // TODO: Should create custom error
         // Throwing error when try to parse invalid value
         assert_eq!(
             parse_value().parse("invalid value"),
             Err(nom::Err::Error(nom::error::Error::new(
                 "invalid value",
-                nom::error::ErrorKind::Char
+                nom::error::ErrorKind::Tag
             )))
         )
     }
@@ -156,7 +157,7 @@ mod tests {
             parse_value().parse("invalid value"),
             Err(nom::Err::Error(nom::error::Error::new(
                 "invalid value",
-                nom::error::ErrorKind::Char
+                nom::error::ErrorKind::Tag
             )))
         );
 
