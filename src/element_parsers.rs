@@ -1,9 +1,15 @@
-use nom::{branch::alt, bytes::complete::tag, sequence::separated_pair, IResult, Parser};
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    sequence::{separated_pair, terminated},
+    IResult, Parser,
+};
 
 use crate::{
     elements::ElementKind,
     object_parsers::parse_array,
     primitive_parsers::{parse_bool, parse_float, parse_integer, parse_null, parse_string},
+    utils::consume_spaces,
 };
 
 pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
@@ -22,14 +28,18 @@ pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
 
 pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, ElementKind)> {
     |input| {
-        separated_pair(parse_string(), tag(": "), parse_value())
-            .parse(input)
-            .map(|(next_input, (key, value))| match key {
-                ElementKind::String(k) => (next_input, (k, value)),
+        separated_pair(
+            parse_string(),
+            terminated(tag(": "), consume_spaces()),
+            parse_value(),
+        )
+        .parse(input)
+        .map(|(next_input, (key, value))| match key {
+            ElementKind::String(k) => (next_input, (k, value)),
 
-                // Parse string always returns a `ElementKind::String`, so other variants will never be reachable
-                _ => unreachable!(),
-            })
+            // Parse string always returns a `ElementKind::String`, so other variants will never be reachable
+            _ => unreachable!(),
+        })
     }
 }
 
