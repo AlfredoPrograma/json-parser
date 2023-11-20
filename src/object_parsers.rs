@@ -35,6 +35,8 @@ pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, ElementKind> {
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use nom::Parser;
 
     use crate::{
@@ -120,6 +122,13 @@ mod tests {
                     )
                 ])
             ))
+        );
+
+        let empty_object = "{}";
+
+        assert_eq!(
+            parse_object().parse(empty_object),
+            Ok(("", ElementKind::Object(vec![])))
         )
     }
 }
