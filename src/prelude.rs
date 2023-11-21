@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use nom::character::complete::char;
-use nom::Parser;
 use nom::{branch::alt, multi::many0, IResult};
+use nom::{Map, Parser};
 
 #[derive(PartialEq, Debug)]
 pub enum NumberType {
@@ -14,7 +16,7 @@ pub enum JsonValue {
     Number(NumberType),
     String(String),
     Array(Vec<JsonValue>),
-    Object(Vec<(String, JsonValue)>),
+    Object(HashMap<String, JsonValue>),
     Null(Box<Option<JsonValue>>),
 }
 

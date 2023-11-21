@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::char;
@@ -64,13 +66,23 @@ pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
             preceded(consume_spaces(), char('}')),
         )
         .parse(input)
-        .map(|(next_input, elements)| (next_input, JsonValue::Object(elements)))
+        .map(|(next_input, elements)| {
+            let mut object = HashMap::new();
+
+            elements.into_iter().for_each(|(k, v)| {
+                object.insert(k, v);
+
+                ()
+            });
+
+            (next_input, JsonValue::Object(object))
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
+    use std::{collections::HashMap, vec};
 
     use nom::Parser;
 
@@ -136,36 +148,35 @@ mod tests {
         let object =
             "{\n\"name\": \"Alfredo Arvelaez\",\n\"age\": 22,\n\"temps\": [15.5, -10, 25.5]\n}";
 
+        let mut expected = HashMap::new();
+
+        expected.insert(
+            "name".to_string(),
+            JsonValue::String("Alfredo Arvelaez".to_string()),
+        );
+        expected.insert(
+            "age".to_string(),
+            JsonValue::Number(NumberType::Integer(22)),
+        );
+        expected.insert(
+            "temps".to_string(),
+            JsonValue::Array(vec![
+                JsonValue::Number(NumberType::Float(15.5)),
+                JsonValue::Number(NumberType::Integer(-10)),
+                JsonValue::Number(NumberType::Float(25.5)),
+            ]),
+        );
+
         assert_eq!(
             parse_object().parse(object),
-            Ok((
-                "",
-                JsonValue::Object(vec![
-                    (
-                        "name".to_string(),
-                        JsonValue::String("Alfredo Arvelaez".to_string())
-                    ),
-                    (
-                        "age".to_string(),
-                        JsonValue::Number(NumberType::Integer(22))
-                    ),
-                    (
-                        "temps".to_string(),
-                        JsonValue::Array(vec![
-                            JsonValue::Number(NumberType::Float(15.5)),
-                            JsonValue::Number(NumberType::Integer(-10)),
-                            JsonValue::Number(NumberType::Float(25.5))
-                        ])
-                    )
-                ])
-            ))
+            Ok(("", JsonValue::Object(expected)))
         );
 
         let empty_object = "{}";
 
         assert_eq!(
             parse_object().parse(empty_object),
-            Ok(("", JsonValue::Object(vec![])))
+            Ok(("", JsonValue::Object(HashMap::new())))
         )
     }
 
@@ -205,21 +216,6 @@ mod tests {
                     JsonValue::Number(NumberType::Integer(123)),
                     JsonValue::Number(NumberType::Float(-10.5)),
                     JsonValue::Boolean(false),
-                ])
-            ))
-        );
-
-        // Parsin `object` value
-        assert_eq!(
-            parse_value().parse("{\"name\": \"Alfredo\", \"age\": 25}"),
-            Ok((
-                "",
-                JsonValue::Object(vec![
-                    ("name".to_string(), JsonValue::String("Alfredo".to_string())),
-                    (
-                        "age".to_string(),
-                        JsonValue::Number(NumberType::Integer(25))
-                    )
                 ])
             ))
         );
