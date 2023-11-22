@@ -1,0 +1,15 @@
+{
+  "name": "John Doe",
+  "lastName": null,
+  "age": 20,
+  "isActive": true,
+  "price": 2.55,
+  "temp": -10.25,
+  "energy": -1,
+  "nested": {
+    "elements": ["hello", "world", "!"],
+    "otherNested": {
+      "empty": null
+    }
+  }
+}
