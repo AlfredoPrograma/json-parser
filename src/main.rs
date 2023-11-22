@@ -1,6 +1,6 @@
 use std::fs;
 
-use object_parsers::parse_object;
+use prelude::JsonParser;
 
 mod object_parsers;
 mod prelude;
@@ -9,9 +9,11 @@ mod primitive_parsers;
 const EXAMPLE_JSON_PATH: &'static str = "example.json";
 
 fn main() {
+    let parser = JsonParser::new();
+
     match fs::read_to_string(EXAMPLE_JSON_PATH) {
-        Ok(json) => match parse_object().parse(&json) {
-            Ok((_, obj)) => println!("{:#?}", obj),
+        Ok(json) => match parser.parse(&json) {
+            Ok(obj) => println!("{:#?}", obj),
             Err(err) => panic!("{:#?}", err),
         },
 

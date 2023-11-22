@@ -5,6 +5,8 @@ use nom::error::Error;
 use nom::Parser;
 use nom::{branch::alt, multi::many0};
 
+use crate::object_parsers::parse_object;
+
 #[derive(PartialEq, Debug)]
 pub enum NumberType {
     Integer(i32),
@@ -28,5 +30,20 @@ pub fn consume_spaces<'a>() -> impl Parser<&'a str, (), Error<&'a str>> {
         many0(alt((char('\n'), char(' '))))
             .parse(input)
             .map(|(next_input, _)| (next_input, ()))
+    }
+}
+
+pub struct JsonParser {}
+
+impl JsonParser {
+    pub fn new() -> Self {
+        JsonParser {}
+    }
+
+    pub fn parse(self, json: &str) -> Result<JsonValue, String> {
+        match parse_object().parse(json) {
+            Ok((_, object)) => Ok(object),
+            Err(err) => Err(err.to_string()),
+        }
     }
 }
