@@ -3,15 +3,16 @@ use std::collections::HashMap;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::char;
+use nom::error::Error;
 use nom::multi::separated_list0;
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
-use nom::{IResult, Parser};
+use nom::Parser;
 
-use crate::prelude::{consume_spaces, JsonValue};
+use crate::prelude::{consume_spaces, JsonValue, JsonValueParser};
 use crate::primitive_parsers::{parse_bool, parse_float, parse_integer, parse_null, parse_string};
 
-pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_value<'a>() -> JsonValueParser<'a> {
+    Box::new(|input| {
         alt((
             parse_string(),
             parse_float(),
@@ -22,10 +23,10 @@ pub fn parse_value() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
             parse_null(),
         ))
         .parse(input)
-    }
+    })
 }
 
-pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, JsonValue)> {
+pub fn parse_key_value<'a>() -> impl Parser<&'a str, (String, JsonValue), Error<&'a str>> {
     |input| {
         separated_pair(
             parse_string(),
@@ -42,12 +43,12 @@ pub fn parse_key_value() -> impl FnMut(&str) -> IResult<&str, (String, JsonValue
     }
 }
 
-pub fn parse_array_values() -> impl FnMut(&str) -> IResult<&str, Vec<JsonValue>> {
+pub fn parse_array_values<'a>() -> impl Parser<&'a str, Vec<JsonValue>, Error<&'a str>> {
     |input| separated_list0(terminated(tag(", "), consume_spaces()), parse_value()).parse(input)
 }
 
-pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_array<'a>() -> JsonValueParser<'a> {
+    Box::new(|input| {
         delimited(
             terminated(char('['), consume_spaces()),
             parse_array_values(),
@@ -55,11 +56,11 @@ pub fn parse_array() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
         )
         .parse(input)
         .map(|(next_input, arr)| (next_input, JsonValue::Array(arr)))
-    }
+    })
 }
 
-pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_object<'a>() -> JsonValueParser<'a> {
+    Box::new(|input| {
         delimited(
             terminated(char('{'), consume_spaces()),
             separated_list0(pair(tag(","), consume_spaces()), parse_key_value()),
@@ -77,7 +78,7 @@ pub fn parse_object() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
 
             (next_input, JsonValue::Object(object))
         })
-    }
+    })
 }
 
 #[cfg(test)]

@@ -5,22 +5,22 @@ use nom::{
     combinator::opt,
     number::complete::float,
     sequence::delimited,
-    IResult, Parser,
+    Parser,
 };
 
-use crate::prelude::{JsonValue, NumberType};
+use crate::prelude::{JsonValue, JsonValueParser, NumberType};
 
 // TODO: evaluate internal string value in an stricter way
-pub fn parse_string() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_string<'a>() -> JsonValueParser<'a> {
+    Box::new(|input: &'a str| {
         delimited(char('"'), take_until("\""), char('"'))
             .parse(input)
             .map(|(next_input, value)| (next_input, JsonValue::String(value.to_string())))
-    }
+    })
 }
 
-pub fn parse_integer() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_integer<'a>() -> JsonValueParser<'a> {
+    Box::new(|input: &'a str| {
         opt(char('-'))
             .parse(input)
             .and_then(|(next_input, sign)| {
@@ -34,11 +34,11 @@ pub fn parse_integer() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
                 })
             })
             .map(|(next_input, value)| (next_input, JsonValue::Number(NumberType::Integer(value))))
-    }
+    })
 }
 
-pub fn parse_float() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_float<'a>() -> JsonValueParser<'a> {
+    Box::new(|input| {
         opt(char('-')).parse(input).and_then(|(next_input, _)| {
             delimited(digit1, tag("."), digit1)
                 .parse(next_input)
@@ -47,11 +47,11 @@ pub fn parse_float() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
                     (next_input, JsonValue::Number(NumberType::Float(float)))
                 })
         })
-    }
+    })
 }
 
-pub fn parse_bool() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_bool<'a>() -> JsonValueParser<'a> {
+    Box::new(|input| {
         alt((tag("true"), tag("false")))
             .parse(input)
             .map(|(next_input, str_bool)| match str_bool {
@@ -63,15 +63,15 @@ pub fn parse_bool() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
                 _ => unreachable!(),
             })
             .map(|(next_input, value)| (next_input, JsonValue::Boolean(value)))
-    }
+    })
 }
 
-pub fn parse_null() -> impl FnMut(&str) -> IResult<&str, JsonValue> {
-    |input| {
+pub fn parse_null<'a>() -> JsonValueParser<'a> {
+    Box::new(|input| {
         tag("null")
             .parse(input)
             .map(|(next_input, _)| (next_input, JsonValue::Null(Box::new(None))))
-    }
+    })
 }
 
 #[cfg(test)]
